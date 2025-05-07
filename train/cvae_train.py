@@ -8,29 +8,24 @@ import torch.nn as nn
 import torch.optim as optim
 import pandas as pd
 import numpy as np
-import random
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 
 from model.cvae import CVAE
-from model.utils import make_condition_vector
-
+from model.utils import soft_condition_vector, ALL_KEYWORDS
+theme_cols = ALL_KEYWORDS.copy()
 # ✅ Load dataset
 df = pd.read_csv('data/festivals_with_soft_vectors_final_adjusted_utf8.csv')
 
-# ✅ Define theme columns
-theme_cols = ['nature', 'urban', 'healing', 'activity', 'traditional', 'new',
-              'food', 'experience', 'popular', 'hidden', 'quiet', 'lively']
 
-# ✅ Prepare condition and item vectors
+# ✅ Prepare condition and item vectors (soft cond_vector via RBF)
 cond_vectors = []
 item_vectors = []
 
 for _, row in df.iterrows():
-    # Top 6 테마 중 랜덤하게 4개 또는 5개 선택
-    top_k = row[theme_cols].sort_values(ascending=False).head(6).index.tolist()
-    selected_keywords = random.sample(top_k, k=random.choice([4, 5]))
-    cond_vec = make_condition_vector(selected_keywords)
+    top_5 = row[theme_cols].sort_values(ascending=False).head(5).index.tolist()
+    selected_keywords = top_5
+    cond_vec = soft_condition_vector(selected_keywords, ALL_KEYWORDS, sigma=0.5)
     item_vec = torch.tensor(row[theme_cols].astype(float).values, dtype=torch.float32)
     cond_vectors.append(cond_vec)
     item_vectors.append(item_vec)
@@ -88,7 +83,6 @@ for epoch in range(EPOCHS):
 
     print(f"Epoch {epoch+1:02d} - Train RMSE: {train_rmse:.4f}, Val RMSE: {val_rmse:.4f}")
     model.train()
-
 
 # ✅ Save RMSE histories for plotting
 os.makedirs('data/train', exist_ok=True)

@@ -1,32 +1,23 @@
+# ✅ utils.py 안에 추가할 코드 (soft_condition_vector 함수)
 
+import numpy as np
 import torch
+# ✅ Define theme columns
+theme_cols = ['nature', 'urban', 'healing', 'activity', 'traditional', 'new',
+              'spectating', 'experience', 'popular', 'hidden', 'quiet', 'lively']
 
-# 영어 키워드 → 한글 키워드 매핑
-EN_TO_KR = {
-    "healing": "힐링",
-    "nature": "자연",
-    "food": "맛집",
-    "history": "역사",
-    "tradition": "전통",
-    "art": "예술",
-    "experience": "체험",
-    "leisure": "레저",
-    "exhibition": "전시",
-    "relax": "휴식",
-    "shopping": "쇼핑",
-    "activity": "액티비티"
-}
-
-# 고정된 한글 키워드 순서
-ALL_KEYWORDS = list(EN_TO_KR.values())
-
-def make_condition_vector(english_keywords):
+ALL_KEYWORDS = theme_cols.copy()
+# ✅ soft condition vector (RBF 기반)
+def soft_condition_vector(selected_keywords, all_keywords=ALL_KEYWORDS, sigma=0.5):
     """
-    영어 키워드 리스트를 받아서 한글 매핑 후 binary multi-hot 벡터로 변환
-    Args:
-        english_keywords (list of str): 예: ['healing', 'food']
-    Returns:
-        torch.Tensor: 12차원 이진 벡터
+    선택된 키워드들과 전체 키워드 간의 RBF 유사도 기반 소프트 벡터 생성
     """
-    selected_korean = [EN_TO_KR[k] for k in english_keywords if k in EN_TO_KR]
-    return torch.tensor([1 if keyword in selected_korean else 0 for keyword in ALL_KEYWORDS], dtype=torch.float32)
+    def keyword_distance(k1, k2):
+        return 0.0 if k1 == k2 else 1.0
+
+    vec = []
+    for kw in all_keywords:
+        min_dist = min([keyword_distance(kw, sk) for sk in selected_keywords])
+        weight = np.exp(-min_dist**2 / (2 * sigma**2))
+        vec.append(weight)
+    return torch.tensor(vec, dtype=torch.float32)
