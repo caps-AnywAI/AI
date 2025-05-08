@@ -63,15 +63,3 @@ def recommend_places_by_festival(festival_title, radius_km=10, top_k=5):
 
     nearby["distance_km"] = nearby.apply(lambda row: haversine(lat, lon, row["latitude"], row["longitude"]), axis=1)
     return nearby.sort_values("distance_km").head(top_k)[["title", "latitude", "longitude", "distance_km"]].to_dict(orient="records")
-
-# 사용 예시
-if __name__ == "__main__":
-    festivals = recommend_festivals_by_themes(["healing", "activity"])
-    print("\n[추천 축제 결과]")
-    print(festivals)
-
-    if festivals:
-        first_festival = festivals[0]["title"]
-        places = recommend_places_by_festival(first_festival)
-        print("\n[추천 관광지 결과]")
-        print(places)
