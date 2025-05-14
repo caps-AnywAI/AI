@@ -10,10 +10,14 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
-
+from model.utils import load_embedding_model, build_embedding_dict
 from model.cvae import CVAE
 from model.utils import soft_condition_vector, ALL_KEYWORDS
+
 theme_cols = ALL_KEYWORDS.copy()
+# ✅ 임베딩 모델 및 딕셔너리 로드
+tokenizer, model = load_embedding_model()
+embedding_dict = build_embedding_dict(ALL_KEYWORDS, tokenizer, model)
 # ✅ Load dataset
 df = pd.read_csv('data/festivals_with_soft_vectors_final_adjusted_utf8.csv')
 
@@ -25,7 +29,7 @@ item_vectors = []
 for _, row in df.iterrows():
     top_5 = row[theme_cols].sort_values(ascending=False).head(5).index.tolist()
     selected_keywords = top_5
-    cond_vec = soft_condition_vector(selected_keywords, ALL_KEYWORDS, sigma=0.5)
+    cond_vec = soft_condition_vector(selected_keywords, embedding_dict, ALL_KEYWORDS, sigma=0.5)    
     item_vec = torch.tensor(row[theme_cols].astype(float).values, dtype=torch.float32)
     cond_vectors.append(cond_vec)
     item_vectors.append(item_vec)

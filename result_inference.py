@@ -3,12 +3,23 @@ import pandas as pd
 import numpy as np
 from sklearn.neighbors import BallTree
 from model.cvae import CVAE
-from model.utils import soft_condition_vector, ALL_KEYWORDS
+from model.utils import (
+    soft_condition_vector, ALL_KEYWORDS,
+    load_embedding_model, build_embedding_dict
+)
 
+# ✅ 전역에서 한 번만 임베딩 모델 및 딕셔너리 로딩
+tokenizer, bert_model = load_embedding_model()
+embedding_dict = build_embedding_dict(ALL_KEYWORDS, tokenizer, bert_model)
+
+# ✅ 전역에서 모델도 한 번 로딩 (필요시)
+model = None
 def load_model(weight_path="weights/cvae_final_12dim.pt"):
-    model = CVAE(cond_dim=12, item_dim=12)
-    model.load_state_dict(torch.load(weight_path, map_location=torch.device("cpu")))
-    model.eval()
+    global model
+    if model is None:
+        model = CVAE(cond_dim=12, item_dim=12)
+        model.load_state_dict(torch.load(weight_path, map_location=torch.device("cpu")))
+        model.eval()
     return model
 
 def load_festival_data():
@@ -22,7 +33,8 @@ def load_place_data():
 def recommend_festivals_by_themes(selected_themes, top_k=5):
     model = load_model()
     festival_df = load_festival_data()
-    cond_vec = soft_condition_vector(selected_themes, all_keywords=ALL_KEYWORDS)
+    
+    cond_vec = soft_condition_vector(selected_themes, embedding_dict, all_keywords=ALL_KEYWORDS)
     cond_tensor = cond_vec.unsqueeze(0)  # [1, 12]
 
     with torch.no_grad():
@@ -64,7 +76,7 @@ def recommend_places_by_festival(festival_title, radius_km=10, top_k=5):
     nearby["distance_km"] = nearby.apply(lambda row: haversine(lat, lon, row["latitude"], row["longitude"]), axis=1)
     return nearby.sort_values("distance_km").head(top_k)[["title", "latitude", "longitude", "distance_km"]].to_dict(orient="records")
 
-# 사용 예시
+# ✅ 사용 예시
 if __name__ == "__main__":
     festivals = recommend_festivals_by_themes(["healing", "activity"])
     print("\n[추천 축제 결과]")

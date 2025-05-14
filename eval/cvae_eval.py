@@ -1,5 +1,8 @@
-import os
+
 import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import numpy as np
 import pandas as pd
 import torch
@@ -8,9 +11,10 @@ import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import ndcg_score
+from model.utils import load_embedding_model, build_embedding_dict, ALL_KEYWORDS
 
-# 경로 추가
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+tokenizer, model = load_embedding_model()
+embedding_dict = build_embedding_dict(ALL_KEYWORDS, tokenizer, model)
 
 from model.cvae import CVAE
 from model.utils import soft_condition_vector
@@ -21,18 +25,14 @@ device = torch.device("cpu")
 # ✅ Load dataset
 df = pd.read_csv('data/festivals_with_soft_vectors_final_adjusted_utf8.csv')
 
-# ✅ 테마 컬럼 정의
-theme_cols = ['nature', 'urban', 'healing', 'activity', 'traditional', 'new',
-              'spectating', 'experience', 'popular', 'hidden', 'quiet', 'lively']
-
 # ✅ 소프트 condition + item vector 생성
 cond_vectors, item_vectors = [], []
 
 for _, row in df.iterrows():
-    top_k = row[theme_cols].sort_values(ascending=False).head(6).index.tolist()
+    top_k = row[ALL_KEYWORDS].sort_values(ascending=False).head(6).index.tolist()
     selected_keywords = np.random.choice(top_k, size=np.random.choice([4, 5]), replace=False).tolist()
-    cond_vec = soft_condition_vector(selected_keywords, all_keywords=theme_cols, sigma=0.5)
-    item_vec = torch.tensor(row[theme_cols].astype(float).values, dtype=torch.float32)
+    cond_vec = soft_condition_vector(selected_keywords, embedding_dict, all_keywords=ALL_KEYWORDS, sigma=0.5)    
+    item_vec = torch.tensor(row[ALL_KEYWORDS].astype(float).values, dtype=torch.float32)
     cond_vectors.append(cond_vec)
     item_vectors.append(item_vec)
 
