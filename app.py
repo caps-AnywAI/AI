@@ -1,7 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException,Query
 from pydantic import BaseModel
 from typing import List
-from result_inference import recommend_festivals_by_themes, recommend_places_by_festival  # 위 코드에서 함수 불러오기
+from result_inference import recommend_festivals_by_themes, recommend_places_by_festival,get_k_random_festivals  # 위 코드에서 함수 불러오기
 
 app = FastAPI()
 
@@ -16,8 +16,9 @@ class RecommendPlacesRequest(BaseModel):
     top_k: int = 5
 
 # 축제 추천 API
-@app.get("/api/festivals", response_model=List[dict])
+@app.post("/api/v1/festivals", response_model=List[dict])
 async def recommend_festivals(request: RecommendFestivalsRequest):
+    print(request)
     selected_themes = request.themes
     top_k = request.top_k
     
@@ -31,7 +32,7 @@ async def recommend_festivals(request: RecommendFestivalsRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # 관광지 추천 API
-@app.get("/api/places", response_model=List[dict])
+@app.post("/api/v1/places", response_model=List[dict])
 async def recommend_places(request: RecommendPlacesRequest):
     festival_title = request.festival_title
     radius_km = request.radius_km
@@ -46,6 +47,12 @@ async def recommend_places(request: RecommendPlacesRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+
+@app.get("/api/v1/random")
+def get_random_festivals(k: int = Query(3, ge=1, le=10)):
+    random_festivals = get_k_random_festivals(k)
+    return random_festivals.to_dict(orient="records")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)

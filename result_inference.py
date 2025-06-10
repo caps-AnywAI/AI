@@ -30,6 +30,13 @@ def load_place_data():
     pdf = pd.read_csv("data/tourist_places_from_tourapi.csv").rename(columns={"mapx": "longitude", "mapy": "latitude"})
     return pdf
 
+def get_k_random_festivals(k=3):
+    return load_festival_data()\
+        .sample(n=k)\
+        .reset_index(drop=True)\
+        [["title", "latitude", "longitude"]]
+
+
 def recommend_festivals_by_themes(selected_themes, top_k=5):
     model = load_model()
     festival_df = load_festival_data()
@@ -48,7 +55,7 @@ def recommend_festivals_by_themes(selected_themes, top_k=5):
     festival_df["score"] = festival_df[ALL_KEYWORDS].apply(cosine_sim, axis=1)
     top_fests = festival_df.sort_values(by="score", ascending=False).head(top_k)
 
-    return top_fests[["title", "score", "latitude", "longitude"]].to_dict(orient="records")
+    return top_fests[["title","latitude", "longitude"]].to_dict(orient="records")
 
 def recommend_places_by_festival(festival_title, radius_km=10, top_k=5):
     festival_df = load_festival_data()
